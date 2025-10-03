@@ -1,4 +1,4 @@
-#include "GardenMap.h"
+#include "OceanMap.h"
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -7,10 +7,10 @@
 #include "GoalTile.h"
 #include "FloorTile.h"
 #include "Player.h"
-#include "Delicate.h"
-#include "Breakable.h"
+#include "Water.h"
+#include "Raft.h"
 
-GardenMap::~GardenMap() {
+OceanMap::~OceanMap() {
     for (auto& row : grid) {
         for (auto& tile : row) {
             delete tile.object;
@@ -18,11 +18,9 @@ GardenMap::~GardenMap() {
         }
     }
     player = nullptr;
-    for (auto* obj : bin) delete obj;
-    bin.clear();
 }
 
-void GardenMap::loadFromFile(const std::string& filename) {
+void OceanMap::loadFromFile(const std::string& filename) {
     for (auto& row : grid) {
         for (auto& tile : row) {
             delete tile.object;
@@ -32,7 +30,6 @@ void GardenMap::loadFromFile(const std::string& filename) {
     grid.clear();
     undoStack.clear();
     redoStack.clear();
-    bin.clear();
     player = nullptr;
     failed = false;
 
@@ -55,8 +52,10 @@ void GardenMap::loadFromFile(const std::string& filename) {
                     playerY = grid.size();
                     tile.object = player;
                     break;
-                case 'F': delete tile.ground; tile.ground = new Delicate(); break;
-                case 'B': delete tile.ground; tile.ground = new Breakable(); break;
+                case '-': delete tile.ground; tile.ground = new Water(); break;
+                case '<': delete tile.ground; tile.ground = new LeftWater(); break;
+                case '>': delete tile.ground; tile.ground = new RightWater(); break;
+                case 'R': tile.object = new Raft();
             }
             row.push_back(tile);
         }
@@ -64,7 +63,7 @@ void GardenMap::loadFromFile(const std::string& filename) {
     }
 }
 
-void GardenMap::render() {
+void OceanMap::render() {
     for (size_t y = 0; y < grid.size(); ++y) {
         for (size_t x = 0; x < grid[y].size(); ++x) {
             Tile& tile = grid[y][x];
@@ -80,11 +79,11 @@ void GardenMap::render() {
         std::cout << '\n';
     }
     if (failed) {
-        std::cout << "\nA crate destroyed a delicate tile. Mission failed.\n";
+        std::cout << "\nLevel failed. Fell into water.\n";
     }
 }
 
-void GardenMap::movePlayer(char input) {
+void OceanMap::movePlayer(char input) {
     if (failed) return;
 
     int dx = 0, dy = 0;
@@ -105,6 +104,9 @@ void GardenMap::movePlayer(char input) {
     Tile& next = grid[ny][nx];
 
     if (!next.object) {
+        if (dynamic_cast<Water*>(next.ground)) {
+            failed = true;
+        }
         if (undoStack.size() >= maxHistory) undoStack.pop_front();
         undoStack.push_back(grid);
         redoStack.clear();
@@ -113,30 +115,35 @@ void GardenMap::movePlayer(char input) {
         playerX = nx;
         playerY = ny;
     }
-    else if (Crate* crate = dynamic_cast<Crate*>(next.object)) {
+    else if (Raft* raft = dynamic_cast<Raft*>(next.object)) {
         if (ny2 < 0 || ny2 >= (int)grid.size() || nx2 < 0 || nx2 >= (int)grid[0].size()) return;
         Tile& beyond = grid[ny2][nx2];
-        if (Delicate* d = dynamic_cast<Delicate*>(beyond.ground)) {
+        if (Water* w = dynamic_cast<Water*>(beyond.ground)) {
             if (undoStack.size() >= maxHistory) undoStack.pop_front();
             undoStack.push_back(grid);
             redoStack.clear();
-            delete beyond.ground;
-            beyond.ground = nullptr;
-            delete next.object;
-            next.object = player;
-            grid[playerY][playerX].object = nullptr;
-            playerX = nx;
-            playerY = ny;
-            failed = true;
-            return;
-        }
 
-        if (Breakable* b = dynamic_cast<Breakable*>(beyond.ground)) {
-            if (undoStack.size() >= maxHistory) undoStack.pop_front();
-            undoStack.push_back(grid);
-            redoStack.clear();
-            bin.push_back(beyond.ground);
-            beyond.ground = new Floor();
+            int temp_nx = nx2, temp_ny = ny2;
+            if (LeftWater* left = dynamic_cast<LeftWater*>(beyond.ground)) {
+                while (temp_nx > 0) {
+                    LeftWater* l = dynamic_cast<LeftWater*>(grid[temp_ny][temp_nx - 1].ground);
+                    if (l) temp_nx--; else break;
+                }
+                bin.push_back(grid[temp_ny][temp_nx].ground);
+                grid[temp_ny][temp_nx].ground = new Floor();
+            }
+            else if (RightWater* left = dynamic_cast<RightWater*>(beyond.ground)) {
+                while (temp_nx < (int)grid[0].size() - 1) {
+                    RightWater* l = dynamic_cast<RightWater*>(grid[temp_ny][temp_nx + 1].ground);
+                    if (l) temp_nx++; else break;
+                }
+                bin.push_back(grid[temp_ny][temp_nx].ground);
+                grid[temp_ny][temp_nx].ground = new Floor();
+            }
+            else {
+                bin.push_back(beyond.ground);
+                beyond.ground = new Floor();
+            }
             bin.push_back(next.object);
             next.object = player;
             grid[playerY][playerX].object = nullptr;
@@ -144,7 +151,31 @@ void GardenMap::movePlayer(char input) {
             playerY = ny;
             return;
         }
-
+        if (!beyond.object) {
+            if (undoStack.size() >= maxHistory) undoStack.pop_front();
+            undoStack.push_back(grid);
+            redoStack.clear();
+            beyond.object = raft;
+            next.object = player;
+            grid[playerY][playerX].object = nullptr;
+            playerX = nx;
+            playerY = ny;
+        }
+    }
+    else if (Crate* crate = dynamic_cast<Crate*>(next.object)) {
+        if (ny2 < 0 || ny2 >= (int)grid.size() || nx2 < 0 || nx2 >= (int)grid[0].size()) return;
+        Tile& beyond = grid[ny2][nx2];
+        if (Water* w = dynamic_cast<Water*>(beyond.ground)) {
+            if (undoStack.size() >= maxHistory) undoStack.pop_front();
+            undoStack.push_back(grid);
+            redoStack.clear();
+            bin.push_back(next.object);
+            next.object = player;
+            grid[playerY][playerX].object = nullptr;
+            playerX = nx;
+            playerY = ny;
+            return;
+        }
         if (!beyond.object || dynamic_cast<Goal*>(beyond.object)) {
             if (undoStack.size() >= maxHistory) undoStack.pop_front();
             undoStack.push_back(grid);
@@ -158,7 +189,7 @@ void GardenMap::movePlayer(char input) {
     }
 }
 
-void GardenMap::undo() {
+void OceanMap::undo() {
     if (!undoStack.empty()) {
         if (redoStack.size() >= maxHistory) redoStack.pop_front();
         redoStack.push_back(grid);
@@ -176,7 +207,7 @@ void GardenMap::undo() {
     }
 }
 
-void GardenMap::redo() {
+void OceanMap::redo() {
     if (!redoStack.empty()) {
         if (undoStack.size() >= maxHistory) undoStack.pop_front();
         undoStack.push_back(grid);
@@ -194,7 +225,7 @@ void GardenMap::redo() {
     }
 }
 
-bool GardenMap::isVictory() {
+bool OceanMap::isVictory() {
     if (failed) return false;
     for (auto& row : grid) {
         for (auto& tile : row) {
