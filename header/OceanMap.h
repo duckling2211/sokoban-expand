@@ -4,7 +4,7 @@
 #include <deque>
 #include "Tile.h"
 #include "Player.h"
-class GardenMap : public BaseMap {
+class OceanMap : public BaseMap {
 private:
     std::vector<std::vector<Tile>> grid;
     std::vector<GameObject*> bin;
@@ -15,7 +15,7 @@ private:
     int playerX = 0, playerY = 0;
     bool failed = false;
 public:
-    ~GardenMap();
+    ~OceanMap();
     void loadFromFile(const std::string& filename) override;
     void render() override;
     void movePlayer(char input) override;
