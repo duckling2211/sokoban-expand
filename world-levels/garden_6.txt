@@ -1,0 +1,17 @@
+#######################################################
+#@      BB        BB             BBB                  #
+#   *   BB        BB    * *  *   BBB        .         #
+#   *   BB        BB    * *  *   BBB                  #
+#   *   BB        BB    * *  *   BBB                  #
+#       BB        BB             BBB                  #
+#BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB#
+#BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB#
+#       BB        BBB            BBB                  #
+#   *   BB        BBB            BBB                  #
+#   *   BB        BBB            BBB                  #
+#   *   BB   .    BBB    * *     BBB        .         #
+#       BB   .    BBB    * *     BBB        .         #
+#       BB        BBB    * *     BBB        .         #
+#       BB        BBB            BBB                  #
+#       BB        BBB            BBB                  #
+#######################################################
