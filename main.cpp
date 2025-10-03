@@ -37,7 +37,14 @@ int main() {
     std::vector<LevelInfo> levels = {
         {"garden", "garden_1.txt"},
         {"garden", "garden_2.txt"},
-        {"garden", "garden_3.txt"}
+        {"garden", "garden_3.txt"},
+        {"garden", "garden_4.txt"},
+        {"garden", "garden_5.txt"},
+        {"garden", "garden_6.txt"},
+        {"ocean", "ocean_1.txt"},
+        {"ocean", "ocean_2.txt"},
+        {"ocean", "ocean_3.txt"},
+        {"ocean", "ocean_4.txt"}
     };
 
     for (const auto& level : levels) {
@@ -60,16 +67,21 @@ int main() {
             game->render();
 
             if (game->isVictory()) {
-                std::cout << "\nVictory!\n";
+                std::cout << "\nVictory! Press [any key] to continue: \n";
+                char C = getChar();
+                std::cout << C << '\n';
                 break;
             }
 
             if (game->hasFailed()) {
-                std::cout << "\nPress R to restart, Q to quit level: ";
+                std::cout << "\nPress R to restart, [any key] to quit game: ";
                 char c = getch();
                 std::cout << c << '\n';
                 if (tolower(c) == 'r') goto restart_level;
-                else break;
+                else {
+                    std::cout << "Game exited.\n";
+                    return 0;
+                }
             }
 
             std::cout << "\nMove (WASD), R = Retry, U = Undo, E = Redo, Q = Quit: ";
